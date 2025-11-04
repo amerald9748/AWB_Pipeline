@@ -1,0 +1,62 @@
+{
+  "mcp_servers": {
+    "excel_csv_mcp": {
+      "name": "Excel/CSV MCP Server",
+      "author": "ishayoyo",
+      "repository": "https://github.com/ishayoyo/excel-mcp",
+      "purpose": "Primary server for Excel data analysis with built-in COUNT, SUM, AVG operations",
+      "features": [
+        "Built-in analytics (SUM, AVG, COUNT, MIN, MAX)",
+        "Advanced filtering with conditions",
+        "Statistical analysis",
+        "Optimized for large datasets",
+        "Multi-format support (CSV, XLSX, XLS)"
+      ],
+      "installation": "npm install -g excel-csv-mcp",
+      "priority": 1
+    },
+    "excel_mcp_server": {
+      "name": "Excel MCP Server",
+      "author": "haris-musa",
+      "repository": "https://github.com/haris-musa/excel-mcp-server",
+      "purpose": "Backup server for Excel manipulation and pivot table operations",
+      "features": [
+        "Pivot tables and data analysis",
+        "Chart creation",
+        "Advanced filtering",
+        "Robust error handling"
+      ],
+      "installation": "npm install -g excel-mcp-server",
+      "priority": 2
+    },
+    "everything_search_mcp": {
+      "name": "Everything Search MCP",
+      "author": "Built-in",
+      "purpose": "Fast file system search using Everything SDK (Windows)",
+      "features": [
+        "Lightning-fast file search",
+        "Wildcard and regex support",
+        "Size and date filtering",
+        "Path-based searching"
+      ],
+      "priority": 1
+    },
+    "filesystem_mcp": {
+      "name": "Filesystem MCP",
+      "author": "Built-in",
+      "purpose": "File system operations for reading Excel files",
+      "features": [
+        "Read text and binary files",
+        "Directory listing",
+        "File metadata retrieval"
+      ],
+      "priority": 1
+    }
+  },
+  "usage_notes": {
+    "excel_processing": "Use excel_csv_mcp as primary for accurate counting and aggregation",
+    "file_search": "Use everything_search_mcp for Windows file system searches",
+    "fallback": "If excel_csv_mcp fails, fall back to excel_mcp_server",
+    "validation": "Always validate count results manually for critical operations"
+  }
+}

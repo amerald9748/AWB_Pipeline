@@ -1,0 +1,51 @@
+{
+  "project_info": {
+    "name": "AWB Batch Processor",
+    "version": "1.0.0",
+    "description": "Automated system for searching, processing, and analyzing AWB unloading plans"
+  },
+  "paths": {
+    "base_search_path": "D:\\UnloadingPlans\\拾谷SAGSC\\Amazon\\拾谷\\",
+    "input_directory": "./data/input",
+    "output_directory": "./data/output",
+    "log_directory": "./logs"
+  },
+  "file_patterns": {
+    "excel_extensions": [".xlsx", ".xls"],
+    "archive_extensions": [".zip"],
+    "manifest_keywords": ["清单", "manifest", "list"]
+  },
+  "awb_formats": {
+    "standard": "^[A-Z]{4}\\d{7}$",
+    "dash_format": "^\\d{3}-\\d{8}$",
+    "customer_format": "^[A-Z]{3}\\d{3}-\\d{3}$"
+  },
+  "excel_columns": {
+    "tracking_number": "运单号",
+    "customer_order": "客户单号",
+    "fba_shipment_id": "扩展单号",
+    "warehouse_code": "仓库代码",
+    "po_number": "PO Number",
+    "country": "收件人国家",
+    "carton_count": "件数",
+    "actual_weight": "实际重量(KG)",
+    "volumetric_weight": "材积重",
+    "volume": "体积(m³)"
+  },
+  "warehouses": {
+    "target_warehouses": ["YOW3", "YXU1", "YYZ4", "YYZ7", "YYZ9", "YOO1", "XYY1"],
+    "primary_warehouse": "YOW3"
+  },
+  "processing": {
+    "skip_empty_po": false,
+    "validate_totals": true,
+    "generate_summary": true,
+    "export_format": "xlsx"
+  },
+  "reporting": {
+    "include_missing_po": true,
+    "include_warehouse_breakdown": true,
+    "include_weight_analysis": true,
+    "include_validation_errors": true
+  }
+}
