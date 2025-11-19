@@ -1,0 +1,6 @@
+# .geminiignore file
+.venv/
+.venv_py39/
+.git/
+__pycache__/
+*.whl

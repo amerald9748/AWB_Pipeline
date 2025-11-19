@@ -186,13 +186,13 @@ awb-batch-processor/
 ### 4. Core Functionality Requirements
 #### A. AWB Search Module (`awb_search.py`)
 ```python
-# TODO: Implement AWB file search functionality
-# - Accept list of AWBs (from CSV, Excel, or text file)
-# - Use Everything MCP to search for AWB folders/files
-# - Support multiple AWB format patterns (regex matching)
-# - Handle Chinese characters in file paths
-# - Return structured results with full file paths
-# - Log search results and failures
+# Implemented AWB file search functionality
+# - Accepts a pipeline_input dictionary with 'customer_code' and 'awb'.
+# - Uses a composite search strategy to find the most likely file.
+# - Supports multiple search strategies (Everything, name-based, directory-name-based).
+# - Handles Chinese characters in file paths.
+# - Returns the full file path of the most likely match.
+# - Logs search results and failures to logs/awb_search.log.
 ```
 
 #### B. Excel Processing Module (`excel_processor.py`)
@@ -261,9 +261,20 @@ flake8>=6.0.0
 ### 8. Initial TODO List
 - **Phase 1**: Project Setup
 - **Phase 2**: Core Development
+  - **AWB Search Module**: Complete
 - **Phase 3**: Reporting
 - **Phase 4**: Testing & Refinement
+  - Test search functions in `awb_search.py`
 - **Phase 5**: Documentation & Deployment
+
+### Search Strategies (`search_strategies.py`)
+The project uses a composite search strategy to find AWB files, ensuring both speed and accuracy. The strategies are:
+- **`EverythingSearchStrategy`**: The primary strategy, using the Everything command-line tool for near-instantaneous file searches. It is highly effective but requires Everything to be installed.
+- **`NameBasedSearchStrategy`**: A fallback strategy that performs a recursive search for files with names containing the AWB number. This is slower but does not have external dependencies.
+- **`DirectoryNameSearchStrategy`**: Another fallback that searches for directories with names containing the AWB number and then looks for Excel files within those directories.
+- **`CompositeSearchStrategy`**: A wrapper that tries the strategies in a prioritized order (Everything, then name-based, then directory-name-based) and returns the first result found.
+
+Each strategy includes a scoring mechanism to determine the most relevant file based on keywords in the filename and path.
 
 ### Example Usage
 ```python
