@@ -1,0 +1,29 @@
+--- Debugging CXDU1865571.xlsx ---
+Sheets found: ['派送计划 Unloading Plan', 'Sheet2']
+
+Processing Sheet: 派送计划 Unloading Plan
+  Detected Header Row: 1
+  Raw Rows: 138
+  Mapped Columns: ['BOX_COUNT', 'WEIGHT_KG', 'DESTINATION_FC', 'FBA_ID', 'PO_NUMBER', 'DELIVERY_METHOD']
+  Rows after Destination Filter: 86
+  Box Count in sheet: 744
+
+Processing Sheet: Sheet2
+  Detected Header Row: 0
+  Raw Rows: 5
+  Mapped Columns: []
+  Sheet dropped (no destination column)
+
+Has Priority Sheet: False
+
+Final Consolidated Rows: 86
+Final Total Box Count: 744
+
+==============================
+
+--- Debugging FWRU0085703.xlsx ---
+Sheets found: ['EAST', '11']
+
+Processing Sheet: EAST
+  Detected Header Row: 1
+Fatal Error: Value does not match pattern ^[$]?([A-Za-z]{1,3})[$]?(\d+)(:[$]?([A-Za-z]{1,3})[$]?(\d+)?)?$|^[A-Za-z]{1,3}:[A-Za-z]{1,3}$

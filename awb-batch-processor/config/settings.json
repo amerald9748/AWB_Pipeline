@@ -1,51 +1,113 @@
 {
   "project_info": {
     "name": "AWB Batch Processor",
-    "version": "1.0.0",
-    "description": "Automated system for searching, processing, and analyzing AWB unloading plans"
+    "version": "2.0.0",
+    "description": "Automated system for searching, downloading (via NutCloud), and consolidating AWB unloading plans"
   },
   "paths": {
-    "base_search_path": "D:\\UnloadingPlans\\拾谷SAGSC\\Amazon\\拾谷\\",
     "input_directory": "./data/input",
     "output_directory": "./data/output",
     "log_directory": "./logs"
   },
   "file_patterns": {
-    "excel_extensions": [".xlsx", ".xls"],
-    "archive_extensions": [".zip"],
-    "manifest_keywords": ["清单", "manifest", "list"]
+    "excel_extensions": [
+      ".xlsx",
+      ".xls"
+    ],
+    "archive_extensions": [
+      ".zip"
+    ]
   },
-  "awb_formats": {
-    "standard": "^[A-Z]{4}\\d{7}$",
-    "dash_format": "^\\d{3}-\\d{8}$",
-    "customer_format": "^[A-Z]{3}\\d{3}-\\d{3}$"
+  "delivery_methods": {
+    "exclude_keywords": [
+      "UPS",
+      "快递",
+      "COURIER",
+      "EXPRESS"
+    ]
   },
   "excel_columns": {
-    "tracking_number": "运单号",
-    "customer_order": "客户单号",
-    "fba_shipment_id": "扩展单号",
-    "warehouse_code": "仓库代码",
-    "po_number": "PO Number",
-    "country": "收件人国家",
-    "carton_count": "件数",
-    "actual_weight": "实际重量(KG)",
-    "volumetric_weight": "材积重",
-    "volume": "体积(m³)"
+    "FBA_ID": [
+      "SHIPMENT ID",
+      "FBA NO.",
+      "FBA#",
+      "扩展单号",
+      "FBA",
+      "SHIPMENTID"
+    ],
+    "PO_NUMBER": [
+      "REFERENCE ID",
+      "PO#",
+      "PO NUMBER",
+      "PO"
+    ],
+    "BOX_COUNT": [
+      "PCS",
+      "CTNS",
+      "箱数/件数",
+      "箱数",
+      "件数",
+      "CARTON COUNT",
+      "CARTONS",
+      "CARTON"
+    ],
+    "WEIGHT_KG": [
+      "KGS",
+      "GW",
+      "重量",
+      "实际重量(KG)",
+      "WEIGHT",
+      "G.W.",
+      "G.W"
+    ],
+    "DESTINATION_FC": [
+      "AMAZON",
+      "亚马逊",
+      "仓库代码",
+      "派送目的地",
+      "DESTINATION",
+      "ADDRESS",
+      "FC"
+    ],
+    "MISCELLANEOUS_NOTES": [
+      "备注",
+      "特殊指令/备注",
+      "箱唛标签说明",
+      "CCN#"
+    ],
+    "DELIVERY_METHOD": [
+      "派送方式",
+      "METHOD"
+    ]
   },
-  "warehouses": {
-    "target_warehouses": ["YOW3", "YXU1", "YYZ4", "YYZ7", "YYZ9", "YOO1", "XYY1"],
-    "primary_warehouse": "YOW3"
-  },
+  "target_destinations": [
+    "YYZ1",
+    "YYZ3",
+    "YYZ4",
+    "YYZ7",
+    "YYZ9",
+    "YXU1",
+    "YOO1",
+    "YHM1",
+    "YGK1",
+    "XYY1",
+    "YOW1",
+    "YOW3"
+  ],
   "processing": {
     "skip_empty_po": false,
     "validate_totals": true,
     "generate_summary": true,
-    "export_format": "xlsx"
-  },
-  "reporting": {
-    "include_missing_po": true,
-    "include_warehouse_breakdown": true,
-    "include_weight_analysis": true,
-    "include_validation_errors": true
+    "export_format": "xlsx",
+    "output_columns": [
+      "SOURCE_FILE",
+      "FBA_ID",
+      "PO_NUMBER",
+      "BOX_COUNT",
+      "WEIGHT_KG",
+      "DESTINATION_FC",
+      "MISCELLANEOUS_NOTES",
+      "DELIVERY_METHOD"
+    ]
   }
 }

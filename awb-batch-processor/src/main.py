@@ -1,55 +1,187 @@
-from awb_search import find_awb_file
-from utils import get_logger, parse_aggregated_info
+import sys
+import os
+import argparse
+import logging
+import csv
+from datetime import datetime
 
-logger = get_logger(__name__, r'D:\Automation_Workspace\AWB_Pipeline\awb-batch-processor\logs\main.log')
+# Add project root to path to ensure config module can be found
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+sys.path.insert(0, project_root)
+
+from nutcloud.pipeline import process_awb
+from nutcloud.pipeline import process_awb
+from consolidation import run_consolidation
+
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
+
+def smart_cleanup(output_dir, allowed_awbs):
+    """
+    Removes files in output_dir that do not correspond to any AWB in allowed_awbs.
+    Preserves Master_Consolidated_FBA.xlsx.
+    """
+    if not os.path.exists(output_dir):
+         return
+         
+    logger.info(f"Performing Smart Cleanup in {output_dir}...")
+    allowed_set = set(str(a).strip() for a in allowed_awbs)
+    
+    deleted_count = 0
+    for filename in os.listdir(output_dir):
+        # Skip Master File
+        if "Master_Consolidated" in filename:
+            continue
+            
+        file_path = os.path.join(output_dir, filename)
+        if not os.path.isfile(file_path):
+            continue
+            
+        # Check if file matches any allowed AWB
+        # Pipeline names files as {AWB}.xlsx
+        name_no_ext = os.path.splitext(filename)[0]
+        
+        if name_no_ext not in allowed_set:
+            try:
+                os.remove(file_path)
+                deleted_count += 1
+            except Exception as e:
+                logger.warning(f"Could not delete {filename}: {e}")
+                
+    logger.info(f"Cleanup complete. Removed {deleted_count} files.")
+
+def process_batch(file_path: str, output_dir: str):
+    """
+    Process a batch of AWBs from a text file.
+    """
+    if not os.path.exists(file_path):
+        logger.error(f"Input file not found: {file_path}")
+        return False
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        awbs = [line.strip() for line in f if line.strip()]
+
+    total = len(awbs)
+    
+    # Smart Cleanup
+    smart_cleanup(output_dir, awbs)
+    
+    logger.info(f"Starting batch processing for {total} AWBs...")
+
+    results = []
+    
+    for i, awb in enumerate(awbs, 1):
+        logger.info(f"[{i}/{total}] Processing AWB: {awb}")
+        try:
+            result = process_awb(awb, output_dir)
+            
+            # Ensure result is a dict
+            if isinstance(result, bool):
+                 result = {
+                     'success': result, 
+                     'file': None, 
+                     'error': "Legacy boolean return" if not result else None
+                 }
+                 
+            results.append({
+                'AWB': awb,
+                'Success': result.get('success', False),
+                'File': result.get('file', 'N/A'),
+                'Error': result.get('error', '')
+            })
+        except Exception as e:
+            logger.error(f"Error processing AWB {awb}: {e}")
+            results.append({
+                'AWB': awb,
+                'Success': False,
+                'File': 'N/A',
+                'Error': str(e)
+            })
+
+
+
+    logger.info("Batch processing phase completed.")
+    return True
 
 def main():
-    """
-    Main function to run the AWB processing pipeline.
-    """
-    # List of AWBs that should definitely be found (true positives)
-    # Format: "CUSTOMER_CODE-AWB-DB_ID"
-    true_positives_aggregated = [
-        "HPAT-250358-695-55361316-41634",
-        "MJ-25-TEMU6301732-37591",
-        "JJT-US25125-CAIU5824057-41866",
-        "JJT-94-TIIU7556737-40603",
-        "KQ-298-CCLU7412212-32915"
-    ]
+    parser = argparse.ArgumentParser(description="NutCloud Grey Hat API Client & Consolidator")
+    
+    # Input group: either single AWB, file list, or just consolidation
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("awb", nargs='?', help="Single AWB Number to search and download")
+    group.add_argument("-f", "--file", help="Path to text file containing list of AWBs (one per line)")
+    
+    parser.add_argument("--output", default=r"D:\Automation_Workspace\Downloaded_AWBs", help="Output directory for downloads")
+    
+    # Consolidation args
+    parser.add_argument("--consolidate", action="store_true", help="Run consolidation after processing (or alone if no AWB input provided)")
+    parser.add_argument("--consolidate_output", default="Master_Consolidated_FBA.xlsx", help="Filename for consolidated report")
+    
+    # Filtering args
+    parser.add_argument("--include-ups", action="store_true", help="Include UPS/Courier shipments (default: Exclude)")
+    parser.add_argument("--destinations", help="Comma-separated list of warehouses to include (e.g. 'YYZ4,YOW3') or 'ALL'")
 
-    # List of test AWBs (unknown if they exist)
-    test_awbs_aggregated = [
-        "UNKNOWN-OOCU5878901-11",
-        "TT-TT-46-12",
-        "AG-AGAT-250080-13", # Using AG from the map
-        "HPAT-HP-1096-14", # Using HPAT from the map
-        "UNKNOWN-8F5LZ250929104E-15",
-        "LX-LX10166221-16", # Using LX from the map
-        "HPAT-HPAT-250358-17",
-        "UNKNOWN-ZIMUSHH31621387-18",
-    ]
-
-    # Process true positives first
-    logger.info("Starting search for true positive AWBs...")
-    for aggregated_string in true_positives_aggregated:
-        pipeline_input = parse_aggregated_info(aggregated_string)
-        awb = pipeline_input.get('awb')
-        awb_file_paths = find_awb_file(pipeline_input)
-        if awb_file_paths:
-            logger.info(f"✓ Found file(s) for AWB '{awb}': {awb_file_paths}")
+    args = parser.parse_args()
+    
+    # 1. Processing Phase
+    processed_any = False
+    if args.file:
+        success = process_batch(args.file, args.output)
+        processed_any = True
+    elif args.awb:
+        print(f"Starting pipeline for AWB: {args.awb}")
+        result = process_awb(args.awb, args.output)
+        
+        success = result.get('success') if isinstance(result, dict) else result
+        
+        if success:
+            print("Pipeline completed successfully.")
+            if isinstance(result, dict) and result.get('file'):
+                 print(f"File saved to: {result['file']}")
         else:
-            logger.error(f"✗ No file found for AWB '{awb}' - THIS SHOULD NOT HAPPEN")
+            print("Pipeline failed.")
+            if isinstance(result, dict) and result.get('error'):
+                 print(f"Error: {result['error']}")
+        processed_any = True
+    
+    # 2. Consolidation Phase
+    if args.consolidate:
+        # If we didn't process any files but consolidate is requested, we just run consolidation on the output dir
+        # If we DID process files, we also run consolidation on that updated dir
+        
+        # Determine strict input directory for consolidation
+        # If user processed files, we assume they want to consolidate the RESULTS (args.output)
+        # If user just ran --consolidate, they must ensure args.output has files.
+        con_input = args.output
+        con_output = os.path.join(args.output, args.consolidate_output)
+        
+        print(f"Starting consolidation in {con_input} -> {con_output}")
+        
+        # Parse destinations list
+        dest_list = None
+        if args.destinations:
+            if args.destinations.strip().upper() == 'ALL':
+                dest_list = 'ALL'
+            else:
+                dest_list = [d.strip().upper() for d in args.destinations.split(',') if d.strip()]
 
-    logger.info("\nStarting search for test AWBs...")
-    for aggregated_string in test_awbs_aggregated:
-        pipeline_input = parse_aggregated_info(aggregated_string)
-        awb = pipeline_input.get('awb')
-        awb_file_paths = find_awb_file(pipeline_input)
-        if awb_file_paths:
-            logger.info(f"Found file(s) for test AWB '{awb}': {awb_file_paths}")
+        if run_consolidation(con_input, con_output, include_ups=args.include_ups, target_destinations_override=dest_list):
+            print("Consolidation finished.")
         else:
-            logger.info(f"No file found for test AWB '{awb}'")
-
+            print("Consolidation finished with potential warnings or empty result.")
+            
+    if not processed_any and not args.consolidate:
+        parser.print_help()
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
