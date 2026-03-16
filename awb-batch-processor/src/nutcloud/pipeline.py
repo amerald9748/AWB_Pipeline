@@ -1,11 +1,15 @@
 import os
 import logging
+from dotenv import load_dotenv
 from .client import NutStoreClient
 from .scoring import find_best_file_match, score_nutstore_file
 
+load_dotenv()
 logger = logging.getLogger(__name__)
 
-def process_awb(awb_number: str, output_dir: str = r"D:\Automation_Workspace\Downloaded_AWBs") -> dict:
+def process_awb(awb_number: str, output_dir: str = None) -> dict:
+    if output_dir is None:
+        output_dir = os.getenv("OUTPUT_DIR", "./output")
     """
     Orchestrates the search, browse, filter, and download pipeline using a priority BFS.
     Returns: {'success': bool, 'file': str, 'error': str}

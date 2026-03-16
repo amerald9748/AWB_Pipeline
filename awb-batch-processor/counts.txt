@@ -1,2 +1,0 @@
-CXDU1865571.xlsx: 744
-FWRU0085703.xlsx: Error: Value does not match pattern ^[$]?([A-Za-z]{1,3})[$]?(\d+)(:[$]?([A-Za-z]{1,3})[$]?(\d+)?)?$|^[A-Za-z]{1,3}:[A-Za-z]{1,3}$

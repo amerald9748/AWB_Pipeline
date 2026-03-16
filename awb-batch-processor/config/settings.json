@@ -6,7 +6,7 @@
   },
   "paths": {
     "input_directory": "./data/input",
-    "output_directory": "./data/output",
+    "output_directory": "./output",
     "log_directory": "./logs"
   },
   "file_patterns": {

@@ -4,10 +4,14 @@ import argparse
 import logging
 import csv
 from datetime import datetime
+from dotenv import load_dotenv
 
-# Add project root to path to ensure config module can be found
+load_dotenv()
+
+# Add project root and src to path to ensure modules can be found
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
+sys.path.insert(0, current_dir)
 sys.path.insert(0, project_root)
 
 from nutcloud.pipeline import process_awb
@@ -76,6 +80,9 @@ def process_batch(file_path: str, output_dir: str):
     smart_cleanup(output_dir, awbs)
     
     logger.info(f"Starting batch processing for {total} AWBs...")
+    logger.info(f"Input file: {file_path}")
+    logger.info(f"Output directory: {output_dir}")
+    logger.info("-" * 40)
 
     results = []
     
@@ -118,9 +125,13 @@ def main():
     # Input group: either single AWB, file list, or just consolidation
     group = parser.add_mutually_exclusive_group()
     group.add_argument("awb", nargs='?', help="Single AWB Number to search and download")
-    group.add_argument("-f", "--file", help="Path to text file containing list of AWBs (one per line)")
     
-    parser.add_argument("--output", default=r"D:\Automation_Workspace\Downloaded_AWBs", help="Output directory for downloads")
+    # Load settings from .env with fallback defaults
+    default_input = os.getenv("INPUT_LIST_PATH", "batch_input.txt")
+    default_output = os.getenv("OUTPUT_DIR", "./output")
+    
+    parser.add_argument("-f", "--file", default=default_input, help=f"Path to text file containing list of AWBs (default: {default_input})")
+    parser.add_argument("--output", default=default_output, help=f"Output directory (default: {default_output}) for downloads")
     
     # Consolidation args
     parser.add_argument("--consolidate", action="store_true", help="Run consolidation after processing (or alone if no AWB input provided)")
@@ -137,8 +148,12 @@ def main():
     if args.file:
         success = process_batch(args.file, args.output)
         processed_any = True
-    elif args.awb:
-        print(f"Starting pipeline for AWB: {args.awb}")
+    if args.awb:
+        logger.info("=" * 40)
+        logger.info(f"Starting pipeline for single AWB: {args.awb}")
+        logger.info(f"Output directory: {args.output}")
+        logger.info("=" * 40)
+        
         result = process_awb(args.awb, args.output)
         
         success = result.get('success') if isinstance(result, dict) else result

@@ -1,5 +1,4 @@
 # secrets.py
-
 nutstore_cookies = {
     "umn": "sgoperating7%40ltianexp.com",
     "TDC_itoken": "1250724234%3A1756308412",

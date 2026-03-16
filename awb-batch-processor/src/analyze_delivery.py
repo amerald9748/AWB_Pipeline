@@ -1,7 +1,10 @@
 import pandas as pd
 import os
+from dotenv import load_dotenv
 
-file_path = r'D:\Automation_Workspace\Downloaded_AWBs\Master_Consolidated_FBA.xlsx'
+load_dotenv()
+output_dir = os.getenv("OUTPUT_DIR", "./output")
+file_path = os.path.join(output_dir, "Master_Consolidated_FBA.xlsx")
 if os.path.exists(file_path):
     df = pd.read_excel(file_path)
     print("--- Delivery Method Analysis ---")
