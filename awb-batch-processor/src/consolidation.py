@@ -168,15 +168,16 @@ class ConsolidationPipeline:
 
 def find_header_row(filepath, lookup_map, max_scan_rows=20, sheet_name=0):
     """
-    Scans the first N rows to find the most likely header row 
-    based on the number of matching columns in lookup_map.
+    Scans the first N rows of an Excel file to find the most likely header row.
+    This is useful for unloading plans that often have random title rows before the actual data.
+    It counts how many standard column names (aliases in lookup_map) exist in each row.
     """
     try:
         engine = 'openpyxl'
         if filepath.lower().endswith('.xls'):
             engine = 'xlrd'
             
-        # Read headerless
+        # Read headerless to manually inspect the top rows
         df_scan = pd.read_excel(filepath, sheet_name=sheet_name, engine=engine, header=None, nrows=max_scan_rows, dtype=str)
         
         best_row = 0
@@ -185,12 +186,13 @@ def find_header_row(filepath, lookup_map, max_scan_rows=20, sheet_name=0):
         for i, row in df_scan.iterrows():
             row_values = [str(x).strip().upper() for x in row.values]
             matches = 0
+            # Count how many recognized column aliases are in the current row
             for alias in lookup_map.keys():
                 if alias in row_values:
                     matches += 1
             
             # Heuristic: If we find > 2 matches, it's a strong candidate. 
-            # We want the one with MAX matches.
+            # We want the one with MAX matches to definitively identify the header row.
             if matches > max_matches:
                 max_matches = matches
                 best_row = i
@@ -206,14 +208,15 @@ def find_header_row(filepath, lookup_map, max_scan_rows=20, sheet_name=0):
 
 def read_excel_robust(filepath, sheet_name, header_row=None, lookup_map=None):
     """
-    Attempts to read Excel sheet using pandas. 
-    If it fails (e.g. openpyxl validation error), falls back to manual openpyxl read-only iteration.
+    Attempts to read an Excel sheet using pandas. 
+    If it fails (e.g. openpyxl validation error common in malformed unloading plans), 
+    it falls back to manual openpyxl read-only iteration to extract as much data as possible.
     """
     is_xls = filepath.lower().endswith('.xls')
     engine = 'xlrd' if is_xls else 'openpyxl'
     
     try:
-        # Standard Read
+        # Standard Read using Pandas
         return pd.read_excel(filepath, sheet_name=sheet_name, engine=engine, header=header_row, dtype=str)
     except Exception as e:
         logger.warning(f"Standard read failed for {os.path.basename(filepath)} sheet {sheet_name}: {e}. Attempting robust fallback.")
@@ -231,6 +234,7 @@ def read_excel_robust(filepath, sheet_name, header_row=None, lookup_map=None):
             iterator = ws.values
             
             # 1. Header Detection (Manual)
+            # Fetch the first 20 rows to manually determine the header
             potential_headers = []
             try:
                 for _ in range(20):
@@ -261,6 +265,7 @@ def read_excel_robust(filepath, sheet_name, header_row=None, lookup_map=None):
             rows = [headers] + potential_headers[best_idx+1:]
             
             # 2. Iterate remaining rows safely
+            # If an error occurs midway, we stop but still return the rows collected so far
             error_count = 0
             while True:
                 try:
@@ -285,13 +290,17 @@ def read_excel_robust(filepath, sheet_name, header_row=None, lookup_map=None):
 
 # --- Global Worker for ProcessPool ---
 def _worker(args):
+    """
+    Worker function executed in parallel to process a single unloading plan file.
+    It reads all sheets, standardizes headers, cleans and filters the data,
+    and returns a consolidated DataFrame of valid shipments for this specific file.
+    """
     filepath, worker_config = args
 
     lookup_map = worker_config['lookup_map']
     target_destinations = worker_config['target_destinations']
     exclude_delivery_keywords = worker_config.get('exclude_delivery_keywords', [])
     required_keys = list(worker_config['column_mapping'].keys())
-
 
     filename = os.path.basename(filepath)
     filename_no_ext = os.path.splitext(filename)[0]
@@ -469,12 +478,21 @@ def _worker(args):
         return None
 
 def run_consolidation(input_dir, output_file, config_path=None, include_ups=False, target_destinations_override=None):
+    """
+    Main orchestrator function for combining all downloaded unloading plans into a master file.
+    Steps:
+    1. Traverses the input directory to find all Excel files.
+    2. Spawns a ProcessPoolExecutor to parse each file in parallel using `_worker`.
+    3. Merges the resulting DataFrames into one large 'master_df'.
+    4. Formats the final columns and writes the combined data to the master output Excel file.
+    """
     pipeline = ConsolidationPipeline(config_path)
     
     # Get config for workers
     worker_config = pipeline.get_effective_config(include_ups, target_destinations_override)
     
     all_files = []
+    # 1. Traverse input directory
     for root, dirs, files in os.walk(input_dir):
         for file in files:
             if file.lower().endswith(('.xlsx', '.xls')):
